@@ -1,15 +1,15 @@
 console.log("wc-todo-form");
 
 class WCForm extends HTMLElement {
-    constructor() {
-        super();
+  constructor() {
+    super();
 
-        // Attach a shadow DOM to the custom element
-        this.attachShadow({ mode: 'open' });
+    // Attach a shadow DOM to the custom element
+    this.attachShadow({ mode: 'open' });
 
-        // Create template content
-        const template = document.createElement('template');
-        template.innerHTML = `
+    // Create template content
+    const template = document.createElement('template');
+    template.innerHTML = `
       <style>
         :host {
           display: block;
@@ -22,10 +22,10 @@ class WCForm extends HTMLElement {
           gap: 10px;
         }
         input, button {
-            font-size: 16px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+          font-size: 16px;
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
         }
         ul {
           list-style-type: none;
@@ -60,66 +60,71 @@ class WCForm extends HTMLElement {
       <ul></ul>
     `;
 
-        // Clone template content and append it to shadow DOM
-        this.shadowRoot.appendChild(template.content.cloneNode(true));
+    // Clone template content and append it to shadow DOM
+    this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        // Bind DOM elements
-        this.form = this.shadowRoot.querySelector('form');
-        this.ul = this.shadowRoot.querySelector('ul');
-        this.field = this.shadowRoot.querySelector('input');
+    // Bind DOM elements
+    this.form = this.shadowRoot.querySelector('form');
+    this.ul = this.shadowRoot.querySelector('ul');
+    this.field = this.shadowRoot.querySelector('input');
 
-        // Bind event handler
-        this.form.addEventListener('submit', this.handleEvent.bind(this));
+    // Bind event handler
+    this.form.addEventListener('submit', this.handleEvent.bind(this));
 
-        // Load items from local storage
-        this.loadItems();
+    // Load items from local storage
+    this.loadItems();
+  }
+
+  handleEvent(event) {
+    event.preventDefault();
+    const value = this.field.value.trim();
+    if (value) {
+      const id = crypto.randomUUID();
+      const item = { id, value };
+      this.addItem(item);
+      this.field.value = '';
     }
+  }
 
-    handleEvent(event) {
-        event.preventDefault();
-        const value = this.field.value.trim();
-        if (value) {
-            const id = crypto.randomUUID();
-            const item = { id, value };
-            this.addItem(item);
-            this.field.value = '';
-        }
+  addItem(item) {
+    // Check if item already exists to prevent duplicates
+    const existingItems = Array.from(this.ul.children).map(li => li.dataset.id);
+    if (existingItems.includes(item.id)) return;
+
+    const li = document.createElement('li');
+    li.innerHTML = `${item.value} <button class="remove-button">Remove</button>`;
+    li.dataset.id = item.id; // Store the item ID in a data attribute
+    li.querySelector('.remove-button').addEventListener('click', () => this.removeItem(li, item.id));
+    this.ul.appendChild(li);
+    this.saveToLocalStorage(item);
+  }
+
+  removeItem(li, id) {
+    li.remove();
+    this.removeFromLocalStorage(id);
+  }
+
+  saveToLocalStorage(item) {
+    const items = JSON.parse(localStorage.getItem('items')) || [];
+    // Avoid duplicates by checking if the item already exists
+    if (!items.some(existingItem => existingItem.id === item.id)) {
+      items.push(item);
+      localStorage.setItem('items', JSON.stringify(items));
     }
+  }
 
-    addItem(item) {
-        // Check if item already exists to prevent duplicates
-        const existingItems = Array.from(this.ul.children).map(li => li.dataset.id);
-        if (existingItems.includes(item.id)) return;
+  removeFromLocalStorage(id) {
+    let items = JSON.parse(localStorage.getItem('items')) || [];
+    items = items.filter(item => item.id !== id);
+    localStorage.setItem('items', JSON.stringify(items));
+  }
 
-        const li = document.createElement('li');
-        li.innerHTML = `${item.value} <button class="remove-button">Remove</button>`;
-        li.dataset.id = item.id; // Store the item ID in a data attribute
-        li.querySelector('.remove-button').addEventListener('click', () => this.removeItem(li, item.id));
-        this.ul.appendChild(li);
-        this.saveToLocalStorage(item);
-    }
-
-    removeItem(li, id) {
-        li.remove();
-        this.removeFromLocalStorage(id);
-    }
-
-    saveToLocalStorage(item) {
-        const items = JSON.parse(localStorage.getItem('items')) || [];
-        items.push(item);
-        localStorage.setItem('items', JSON.stringify(items));
-    }
-
-    removeFromLocalStorage(id) {
-        let items = JSON.parse(localStorage.getItem('items')) || [];
-        items = items.filter(item => item.id !== id);
-        localStorage.setItem('items', JSON.stringify(items));
-    }
-
-    loadItems() {
-        const items = JSON.parse(localStorage.getItem('items')) || [];
-        items.forEach((item) => this.addItem(item));
-    }
+  loadItems() {
+    // Clear existing items before loading from local storage
+    this.ul.innerHTML = '';
+    const items = JSON.parse(localStorage.getItem('items')) || [];
+    items.forEach(item => this.addItem(item));
+  }
 }
 
 // Define the custom element
